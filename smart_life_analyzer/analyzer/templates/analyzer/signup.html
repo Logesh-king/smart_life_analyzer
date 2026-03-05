@@ -1,0 +1,58 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Sign Up{% endblock %}
+
+{% block auth_content %}
+<div class="login-container" id="login-page">
+    <div class="login-box">
+        <div class="logo">Smart Life Analyzer</div>
+        <p class="tagline">Track, analyze, and improve your daily life with AI-powered insights</p>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div
+            class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <div class="login-form" id="signup-form">
+            <h2>Create Account</h2>
+            <form method="POST" action="{% url 'signup' %}">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-error">
+                    {% for error in form.non_field_errors %}
+                    {{ error }}<br>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% for field in form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                    {% endif %}
+                    {% if field.errors %}
+                    <div class="text-danger small">
+                        {% for error in field.errors %}
+                        {{ error }}<br>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <button type="submit" class="btn btn-primary" id="signup-btn">Sign Up</button>
+                <div class="toggle-form">
+                    Already have an account? <a href="{% url 'login' %}" id="show-login">Login</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

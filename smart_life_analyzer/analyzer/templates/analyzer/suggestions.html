@@ -1,0 +1,325 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Smart Suggestions{% endblock %}
+
+{% block content %}
+<div id="suggestions-page">
+    <div class="top-header">
+        <div class="page-title">
+            <h2>Smart Suggestions</h2>
+            <p>Personalized recommendations to improve your lifestyle</p>
+        </div>
+        <div class="user-profile">
+            <div>{{ user.get_full_name|default:user.username }}</div>
+            <div class="profile-img">
+                {{ user.username|first|upper }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-filter"></i> Filter Suggestions
+            </div>
+        </div>
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="critical">
+                <span class="badge badge-critical">Critical</span>
+            </button>
+            <button class="filter-btn" data-filter="warning">
+                <span class="badge badge-warning">Warning</span>
+            </button>
+            <button class="filter-btn" data-filter="good">
+                <span class="badge badge-good">Good</span>
+            </button>
+            <select id="category-filter" class="form-control-sm">
+                <option value="all">All Categories</option>
+                <option value="sleep">Sleep</option>
+                <option value="work">Work/Study</option>
+                <option value="finance">Finance</option>
+                <option value="health">Health</option>
+                <option value="mood">Mood</option>
+                <option value="general">General</option>
+            </select>
+        </div>
+    </div>
+    
+    <div id="suggestions-container">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i> Loading suggestions...
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load all suggestions
+    loadSuggestions();
+    
+    // Filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Update active state
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Apply filter
+            const filter = this.getAttribute('data-filter');
+            applyFilter(filter, document.getElementById('category-filter').value);
+        });
+    });
+    
+    // Category filter
+    document.getElementById('category-filter').addEventListener('change', function() {
+        const category = this.value;
+        const activeFilter = document.querySelector('.filter-btn.active').getAttribute('data-filter');
+        applyFilter(activeFilter, category);
+    });
+    
+    async function loadSuggestions() {
+        const container = document.getElementById('suggestions-container');
+        
+        try {
+            const response = await fetch('/api/suggestions/');
+            const data = await response.json();
+            
+            if (data.success) {
+                renderSuggestions(data.suggestions);
+                // Store suggestions for filtering
+                window.allSuggestions = data.suggestions;
+            } else {
+                container.innerHTML = '<div class="empty-state">No suggestions available</div>';
+            }
+        } catch (error) {
+            container.innerHTML = '<div class="error-state">Error loading suggestions</div>';
+            console.error('Error loading suggestions:', error);
+        }
+    }
+    
+    function renderSuggestions(suggestions) {
+        const container = document.getElementById('suggestions-container');
+        
+        if (!suggestions || suggestions.length === 0) {
+            container.innerHTML = '<div class="empty-state">No suggestions found. Complete your daily entries to get personalized suggestions.</div>';
+            return;
+        }
+        
+        // Group by priority
+        const suggestionsByPriority = {
+            critical: suggestions.filter(s => s.priority === 'critical'),
+            warning: suggestions.filter(s => s.priority === 'warning'),
+            good: suggestions.filter(s => s.priority === 'good')
+        };
+        
+        let html = '';
+        
+        // Critical suggestions
+        if (suggestionsByPriority.critical.length > 0) {
+            html += `
+                <div class="priority-section">
+                    <h3 class="section-title critical">
+                        <i class="fas fa-exclamation-circle"></i> Critical Suggestions
+                        <span class="count-badge">${suggestionsByPriority.critical.length}</span>
+                    </h3>
+                    <div class="suggestion-grid">
+            `;
+            
+            suggestionsByPriority.critical.forEach(suggestion => {
+                html += renderSuggestionCard(suggestion);
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Warning suggestions
+        if (suggestionsByPriority.warning.length > 0) {
+            html += `
+                <div class="priority-section">
+                    <h3 class="section-title warning">
+                        <i class="fas fa-exclamation-triangle"></i> Warning Suggestions
+                        <span class="count-badge">${suggestionsByPriority.warning.length}</span>
+                    </h3>
+                    <div class="suggestion-grid">
+            `;
+            
+            suggestionsByPriority.warning.forEach(suggestion => {
+                html += renderSuggestionCard(suggestion);
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Good suggestions
+        if (suggestionsByPriority.good.length > 0) {
+            html += `
+                <div class="priority-section">
+                    <h3 class="section-title good">
+                        <i class="fas fa-check-circle"></i> Good Suggestions
+                        <span class="count-badge">${suggestionsByPriority.good.length}</span>
+                    </h3>
+                    <div class="suggestion-grid">
+            `;
+            
+            suggestionsByPriority.good.forEach(suggestion => {
+                html += renderSuggestionCard(suggestion);
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
+        
+        // Add event listeners for action buttons
+        document.querySelectorAll('.btn-mark-read').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const suggestionId = this.getAttribute('data-id');
+                markSuggestionAsRead(suggestionId);
+            });
+        });
+        
+        document.querySelectorAll('.btn-dismiss').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const suggestionId = this.getAttribute('data-id');
+                dismissSuggestion(suggestionId);
+            });
+        });
+    }
+    
+    function renderSuggestionCard(suggestion) {
+        const categoryIcons = {
+            'sleep': 'fas fa-bed',
+            'work': 'fas fa-laptop-code',
+            'finance': 'fas fa-dollar-sign',
+            'health': 'fas fa-heartbeat',
+            'mood': 'fas fa-smile',
+            'general': 'fas fa-lightbulb'
+        };
+        
+        const icon = categoryIcons[suggestion.category] || 'fas fa-lightbulb';
+        
+        return `
+            <div class="suggestion-card ${suggestion.priority}">
+                <div class="suggestion-header">
+                    <div class="suggestion-category">
+                        <i class="${icon}"></i> ${suggestion.category_display}
+                    </div>
+                    <div class="suggestion-date">
+                        ${new Date(suggestion.created_at).toLocaleDateString()}
+                    </div>
+                </div>
+                <div class="suggestion-icon">
+                    <i class="${suggestion.priority === 'good' ? 'fas fa-check-circle' : 
+                               suggestion.priority === 'warning' ? 'fas fa-exclamation-triangle' : 
+                               'fas fa-exclamation-circle'}"></i>
+                </div>
+                <div class="suggestion-title">${suggestion.title}</div>
+                <p class="suggestion-desc">${suggestion.description}</p>
+                <div class="suggestion-actions">
+                    <button class="btn-mark-read" data-id="${suggestion.id}">
+                        <i class="fas fa-check"></i> Mark as Read
+                    </button>
+                    <button class="btn-dismiss" data-id="${suggestion.id}">
+                        <i class="fas fa-times"></i> Dismiss
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    function applyFilter(priorityFilter, categoryFilter) {
+        let filtered = window.allSuggestions || [];
+        
+        // Apply priority filter
+        if (priorityFilter !== 'all') {
+            filtered = filtered.filter(s => s.priority === priorityFilter);
+        }
+        
+        // Apply category filter
+        if (categoryFilter !== 'all') {
+            filtered = filtered.filter(s => s.category === categoryFilter);
+        }
+        
+        renderSuggestions(filtered);
+    }
+    
+    async function markSuggestionAsRead(suggestionId) {
+        try {
+            const response = await fetch(`/api/suggestion/${suggestionId}/read/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': CSRF_TOKEN,
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Remove the suggestion from view
+                const card = document.querySelector(`[data-id="${suggestionId}"]`).closest('.suggestion-card');
+                card.style.opacity = '0.5';
+                card.querySelector('.suggestion-actions').innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Marked as read</span>';
+                
+                setTimeout(() => {
+                    loadSuggestions(); // Reload all suggestions
+                }, 1000);
+            }
+        } catch (error) {
+            console.error('Error marking suggestion as read:', error);
+        }
+    }
+    
+    async function dismissSuggestion(suggestionId) {
+        if (!confirm('Are you sure you want to dismiss this suggestion?')) return;
+        
+        try {
+            const response = await fetch(`/api/suggestion/${suggestionId}/dismiss/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': CSRF_TOKEN,
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('Suggestion dismissed', 'success');
+                loadSuggestions();
+            }
+        } catch (error) {
+            console.error('Error dismissing suggestion:', error);
+        }
+    }
+    
+    function showNotification(message, type) {
+        // Implementation similar to daily_entry.html
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

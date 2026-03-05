@@ -1,0 +1,172 @@
+{% extends 'analyzer/base.html' %}
+{% load humanize %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div id="home-page">
+    <div class="top-header">
+        <div class="page-title">
+            <h2>Dashboard Overview</h2>
+            <p>Welcome back, {{ user.username }}! Here's your life analytics summary</p>
+        </div>
+        <div class="user-profile">
+            <div>{{ user.get_full_name|default:user.username }}</div>
+            <div class="profile-img">
+                {{ user.username|first|upper }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-grid">
+        <div class="card stat-card">
+            <div class="stat-icon sleep">
+                <i class="fas fa-bed"></i>
+            </div>
+            <div class="stat-value">{{ avg_sleep|default:"0.0" }} hrs</div>
+            <div class="stat-label">Average Sleep</div>
+            <p class="stat-desc">Last 7 days</p>
+        </div>
+        
+        <div class="card stat-card">
+            <div class="stat-icon study">
+                <i class="fas fa-laptop-code"></i>
+            </div>
+            <div class="stat-value">{{ avg_work|default:"0.0" }} hrs</div>
+            <div class="stat-label">Daily Study/Work</div>
+            <p class="stat-desc">Productivity score: {{ productivity_score|default:"0" }}%</p>
+        </div>
+        
+        <div class="card stat-card">
+            <div class="stat-icon expense">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="stat-value">${{ avg_expense|default:"0.00" }}</div>
+            <div class="stat-label">Daily Expense</div>
+            <p class="stat-desc">{{ expense_trend|default:"Stable" }}</p>
+        </div>
+        
+        <div class="card stat-card">
+            <div class="stat-icon mood">
+                <i class="fas fa-smile"></i>
+            </div>
+            <div class="stat-value">{{ today_mood|default:"Neutral" }}</div>
+            <div class="stat-label">Today's Mood</div>
+            <p class="stat-desc">{{ mood_trend|default:"No data" }}</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-chart-line"></i> Weekly Summary
+            </div>
+            <a href="{% url 'dashboard' %}" class="card-action">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="weeklyChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-robot"></i> Smart Suggestions
+            </div>
+            <a href="{% url 'suggestions' %}" class="card-action">View All</a>
+        </div>
+        <div class="suggestion-grid">
+            {% for suggestion in suggestions %}
+            <div class="suggestion-card {{ suggestion.priority }}">
+                <div class="suggestion-icon">
+                    {% if suggestion.priority == 'good' %}
+                        <i class="fas fa-check-circle"></i>
+                    {% elif suggestion.priority == 'warning' %}
+                        <i class="fas fa-exclamation-triangle"></i>
+                    {% else %}
+                        <i class="fas fa-fire"></i>
+                    {% endif %}
+                </div>
+                <div class="suggestion-title">{{ suggestion.title }}</div>
+                <p>{{ suggestion.description }}</p>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <i class="fas fa-chart-line fa-3x"></i>
+                <h3>No suggestions yet</h3>
+                <p>Start adding daily entries to get personalized suggestions</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch weekly data from API
+    fetchWeeklyData();
+    
+    async function fetchWeeklyData() {
+        try {
+            const response = await fetch('/api/weekly-summary/');
+            const data = await response.json();
+            
+            if (data.success) {
+                renderWeeklyChart(data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching weekly data:', error);
+        }
+    }
+    
+    function renderWeeklyChart(data) {
+        const ctx = document.getElementById('weeklyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Sleep (hours)',
+                        data: data.sleep_data,
+                        borderColor: '#4361ee',
+                        backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Study/Work (hours)',
+                        data: data.work_data,
+                        borderColor: '#4cc9f0',
+                        backgroundColor: 'rgba(76, 201, 240, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 12,
+                        title: {
+                            display: true,
+                            text: 'Hours'
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

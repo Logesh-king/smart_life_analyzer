@@ -1,0 +1,368 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div id="dashboard-page">
+    <div class="top-header">
+        <div class="page-title">
+            <h2>Analytics Dashboard</h2>
+            <p>Comprehensive analysis of your life metrics</p>
+        </div>
+        <div class="user-profile">
+            <div>{{ user.get_full_name|default:user.username }}</div>
+            <div class="profile-img">
+                {{ user.username|first|upper }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-chart-pie"></i> Today's Overview
+            </div>
+            <span class="badge badge-primary">{{ today|date:"F d, Y" }}</span>
+        </div>
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-icon sleep">
+                    <i class="fas fa-bed"></i>
+                </div>
+                <div class="stat-value">{{ today_stats.sleep|default:"0.0" }} hrs</div>
+                <div class="stat-label">Sleep</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon study">
+                    <i class="fas fa-laptop-code"></i>
+                </div>
+                <div class="stat-value">{{ today_stats.work|default:"0.0" }} hrs</div>
+                <div class="stat-label">Study/Work</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon expense">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="stat-value">${{ today_stats.expense|default:"0.00" }}</div>
+                <div class="stat-label">Expense</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon mood">
+                    <i class="fas fa-smile"></i>
+                </div>
+                <div class="stat-value">{{ today_stats.mood|default:"Neutral" }}</div>
+                <div class="stat-label">Mood</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-calendar-week"></i> Weekly Summary
+            </div>
+            <div class="date-range">{{ week_start|date:"M d" }} - {{ week_end|date:"M d, Y" }}</div>
+        </div>
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ weekly_stats.avg_sleep|default:"0.0" }} hrs</div>
+                <div class="stat-label">Avg Sleep</div>
+                <div class="stat-trend {% if weekly_stats.sleep_trend == 'up' %}trend-up{% elif weekly_stats.sleep_trend == 'down' %}trend-down{% endif %}">
+                    {% if weekly_stats.sleep_trend == 'up' %}
+                        <i class="fas fa-arrow-up"></i> {{ weekly_stats.sleep_change }}%
+                    {% elif weekly_stats.sleep_trend == 'down' %}
+                        <i class="fas fa-arrow-down"></i> {{ weekly_stats.sleep_change }}%
+                    {% else %}
+                        <i class="fas fa-minus"></i> Stable
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-value">{{ weekly_stats.total_work|default:"0.0" }} hrs</div>
+                <div class="stat-label">Total Study/Work</div>
+                <div class="stat-trend {% if weekly_stats.work_trend == 'up' %}trend-up{% elif weekly_stats.work_trend == 'down' %}trend-down{% endif %}">
+                    {% if weekly_stats.work_trend == 'up' %}
+                        <i class="fas fa-arrow-up"></i> {{ weekly_stats.work_change }}%
+                    {% elif weekly_stats.work_trend == 'down' %}
+                        <i class="fas fa-arrow-down"></i> {{ weekly_stats.work_change }}%
+                    {% else %}
+                        <i class="fas fa-minus"></i> Stable
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-value">${{ weekly_stats.total_expense|default:"0.00" }}</div>
+                <div class="stat-label">Total Expenses</div>
+                <div class="stat-trend {% if weekly_stats.expense_trend == 'up' %}trend-up{% elif weekly_stats.expense_trend == 'down' %}trend-down{% endif %}">
+                    {% if weekly_stats.expense_trend == 'up' %}
+                        <i class="fas fa-arrow-up"></i> {{ weekly_stats.expense_change }}%
+                    {% elif weekly_stats.expense_trend == 'down' %}
+                        <i class="fas fa-arrow-down"></i> {{ weekly_stats.expense_change }}%
+                    {% else %}
+                        <i class="fas fa-minus"></i> Stable
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-heart"></i> Mood Tracker (Last 7 Days)
+            </div>
+            <select id="mood-chart-range" class="form-control-sm">
+                <option value="7">Last 7 Days</option>
+                <option value="14">Last 14 Days</option>
+                <option value="30">Last 30 Days</option>
+            </select>
+        </div>
+        <div class="chart-container">
+            <canvas id="moodChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-wallet"></i> Expense Insights
+            </div>
+            <a href="#" class="card-action">Export Data</a>
+        </div>
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-value">${{ expense_insights.avg_daily|default:"0.00" }}</div>
+                <div class="stat-label">Avg Daily Expense</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-value">{{ expense_insights.highest_day.day|default:"N/A" }}</div>
+                <div class="stat-label">Highest Spending Day</div>
+                <div class="stat-sub">${{ expense_insights.highest_day.amount|default:"0.00" }}</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-value">{{ expense_insights.alerts_count|default:"0" }}</div>
+                <div class="stat-label">Budget Alerts This Week</div>
+            </div>
+        </div>
+        <div class="chart-container" style="height: 200px; margin-top: 20px;">
+            <canvas id="expenseChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-robot"></i> Smart Suggestions
+            </div>
+        </div>
+        <div id="ai-suggestions">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i> Generating AI-powered insights...
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize charts
+    initializeMoodChart();
+    initializeExpenseChart();
+    loadAISuggestions();
+    
+    // Mood chart range selector
+    document.getElementById('mood-chart-range').addEventListener('change', function() {
+        const days = parseInt(this.value);
+        updateMoodChart(days);
+    });
+    
+    async function initializeMoodChart() {
+        await updateMoodChart(7);
+    }
+    
+    async function updateMoodChart(days) {
+        try {
+            const response = await fetch(`/api/mood-data/?days=${days}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                renderMoodChart(data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching mood data:', error);
+        }
+    }
+    
+    function renderMoodChart(data) {
+        const ctx = document.getElementById('moodChart').getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.moodChart) {
+            window.moodChart.destroy();
+        }
+        
+        window.moodChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Mood Score',
+                    data: data.scores,
+                    borderColor: '#f72585',
+                    backgroundColor: 'rgba(247, 37, 133, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#f72585',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 0,
+                        max: 10,
+                        title: {
+                            display: true,
+                            text: 'Mood Score (1-10)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const moodMap = {
+                                    1: 'Very Sad',
+                                    2: 'Sad',
+                                    3: 'Unhappy',
+                                    4: 'Below Average',
+                                    5: 'Neutral',
+                                    6: 'Content',
+                                    7: 'Good',
+                                    8: 'Very Good',
+                                    9: 'Excellent',
+                                    10: 'Perfect'
+                                };
+                                const score = context.parsed.y;
+                                const moodText = moodMap[Math.round(score)] || 'Unknown';
+                                return `Score: ${score} (${moodText})`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    async function initializeExpenseChart() {
+        try {
+            const response = await fetch('/api/expense-data/');
+            const data = await response.json();
+            
+            if (data.success) {
+                renderExpenseChart(data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching expense data:', error);
+        }
+    }
+    
+    function renderExpenseChart(data) {
+        const ctx = document.getElementById('expenseChart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Daily Expenses ($)',
+                    data: data.amounts,
+                    backgroundColor: data.amounts.map(amount => 
+                        amount > 50 ? '#f72585' : amount > 30 ? '#f8961e' : '#4cc9f0'
+                    ),
+                    borderColor: data.amounts.map(amount => 
+                        amount > 50 ? '#f72585' : amount > 30 ? '#f8961e' : '#4cc9f0'
+                    ),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Amount ($)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    async function loadAISuggestions() {
+        const container = document.getElementById('ai-suggestions');
+        
+        try {
+            const response = await fetch('/api/ai-suggestions/');
+            const data = await response.json();
+            
+            if (data.success) {
+                renderAISuggestions(data.suggestions);
+            } else {
+                container.innerHTML = '<div class="empty-state">No AI suggestions available</div>';
+            }
+        } catch (error) {
+            container.innerHTML = '<div class="error-state">Error loading suggestions</div>';
+            console.error('Error loading AI suggestions:', error);
+        }
+    }
+    
+    function renderAISuggestions(suggestions) {
+        const container = document.getElementById('ai-suggestions');
+        
+        if (!suggestions || suggestions.length === 0) {
+            container.innerHTML = '<div class="empty-state">No AI suggestions generated yet</div>';
+            return;
+        }
+        
+        let html = '<div class="suggestion-grid">';
+        
+        suggestions.forEach(suggestion => {
+            html += `
+                <div class="suggestion-card ${suggestion.priority}">
+                    <div class="suggestion-icon">
+                        <i class="fas fa-${suggestion.icon || 'robot'}"></i>
+                    </div>
+                    <div class="suggestion-title">${suggestion.title}</div>
+                    <p>${suggestion.description}</p>
+                    <div class="suggestion-meta">
+                        <span class="category">${suggestion.category}</span>
+                        <span class="confidence">${suggestion.confidence}% confidence</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

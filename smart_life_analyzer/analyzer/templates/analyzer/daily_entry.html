@@ -1,0 +1,348 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Daily Entry{% endblock %}
+
+{% block content %}
+<div id="daily-entry-page">
+    <div class="top-header">
+        <div class="page-title">
+            <h2>Daily Entry</h2>
+            <p>Log your daily activities and metrics</p>
+        </div>
+        <div class="user-profile">
+            <div>{{ user.get_full_name|default:user.username }}</div>
+            <div class="profile-img">
+                {{ user.username|first|upper }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-calendar-plus"></i> Add Today's Entry
+            </div>
+        </div>
+        
+        <form id="daily-entry-form" method="POST" action="{% url 'api_daily_entry' %}">
+            {% csrf_token %}
+            <input type="hidden" name="user_id" value="{{ user.id }}">
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="entry-date">Date</label>
+                    <input type="date" id="entry-date" name="date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="sleep-hours">Sleep Hours</label>
+                    <input type="number" id="sleep-hours" name="sleep_hours" class="form-control" min="0" max="24" step="0.5" placeholder="e.g., 7.5" value="{{ today_entry.sleep_hours|default:'' }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="work-hours">Study/Work Hours</label>
+                    <input type="number" id="work-hours" name="work_hours" class="form-control" min="0" max="24" step="0.5" placeholder="e.g., 8" value="{{ today_entry.work_hours|default:'' }}" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="expense">Expense ($)</label>
+                    <input type="number" id="expense" name="expense" class="form-control" min="0" step="0.01" placeholder="e.g., 35.50" value="{{ today_entry.expense|default:'' }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Mood</label>
+                    <div class="emoji-selector">
+                        {% for mood_value, mood_display, mood_emoji in mood_choices %}
+                        <div class="emoji-option {% if today_entry.mood == mood_value or not today_entry and forloop.first %}selected{% endif %}" 
+                             data-mood="{{ mood_value }}">
+                            {{ mood_emoji }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" id="mood-value" name="mood" value="{{ today_entry.mood|default:'happy' }}">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group full-width">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="4" placeholder="Any additional notes about your day...">{{ today_entry.notes|default:'' }}</textarea>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="save-entry-btn">
+                <i class="fas fa-save"></i> Save Today's Entry
+            </button>
+            <button type="button" class="btn btn-secondary" id="clear-form-btn" style="margin-left: 10px;">
+                <i class="fas fa-trash"></i> Clear Form
+            </button>
+        </form>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-history"></i> Recent Entries
+            </div>
+            <button class="btn btn-sm btn-outline" id="refresh-entries-btn">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+        <div id="recent-entries">
+            <!-- Entries will be loaded via JavaScript -->
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i> Loading entries...
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Emoji selector
+    const emojiOptions = document.querySelectorAll('.emoji-option');
+    const moodValue = document.getElementById('mood-value');
+    
+    emojiOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            emojiOptions.forEach(opt => opt.classList.remove('selected'));
+            option.classList.add('selected');
+            moodValue.value = option.getAttribute('data-mood');
+        });
+    });
+    
+    // Form submission
+    const form = document.getElementById('daily-entry-form');
+    const saveBtn = document.getElementById('save-entry-btn');
+    
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        saveBtn.disabled = true;
+        
+        const formData = new FormData(form);
+        
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': CSRF_TOKEN,
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('Entry saved successfully!', 'success');
+                loadRecentEntries();
+                // Reset form with today's date
+                form.reset();
+                document.getElementById('entry-date').value = new Date().toISOString().split('T')[0];
+                emojiOptions[0].click();
+            } else {
+                showNotification(data.message || 'Error saving entry', 'error');
+            }
+        } catch (error) {
+            showNotification('Network error. Please try again.', 'error');
+            console.error('Error:', error);
+        } finally {
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Today\'s Entry';
+            saveBtn.disabled = false;
+        }
+    });
+    
+    // Clear form button
+    document.getElementById('clear-form-btn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear the form?')) {
+            form.reset();
+            document.getElementById('entry-date').value = new Date().toISOString().split('T')[0];
+            emojiOptions[0].click();
+        }
+    });
+    
+    // Refresh entries button
+    document.getElementById('refresh-entries-btn').addEventListener('click', loadRecentEntries);
+    
+    // Load recent entries on page load
+    loadRecentEntries();
+    
+    async function loadRecentEntries() {
+        const entriesContainer = document.getElementById('recent-entries');
+        entriesContainer.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Loading entries...</div>';
+        
+        try {
+            const response = await fetch('/api/recent-entries/');
+            const data = await response.json();
+            
+            if (data.success) {
+                renderRecentEntries(data.entries);
+            } else {
+                entriesContainer.innerHTML = '<div class="empty-state">No entries found</div>';
+            }
+        } catch (error) {
+            entriesContainer.innerHTML = '<div class="error-state">Error loading entries</div>';
+            console.error('Error loading entries:', error);
+        }
+    }
+    
+    function renderRecentEntries(entries) {
+        const entriesContainer = document.getElementById('recent-entries');
+        
+        if (entries.length === 0) {
+            entriesContainer.innerHTML = '<div class="empty-state">No recent entries found</div>';
+            return;
+        }
+        
+        let html = '';
+        entries.forEach(entry => {
+            const date = new Date(entry.date);
+            const formattedDate = date.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+            
+            const moodEmojis = {
+                'happy': '😊',
+                'neutral': '😐',
+                'sad': '😔',
+                'stressed': '😫',
+                'energetic': '😎',
+                'tired': '😴',
+                'angry': '😠',
+                'sick': '🤒'
+            };
+            
+            html += `
+                <div class="entry-item">
+                    <div class="entry-header">
+                        <div class="entry-date">${formattedDate}</div>
+                        <div class="entry-mood">${moodEmojis[entry.mood] || '😐'}</div>
+                    </div>
+                    <div class="entry-stats">
+                        <span class="stat-item"><i class="fas fa-bed"></i> ${entry.sleep_hours} hrs</span>
+                        <span class="stat-item"><i class="fas fa-laptop"></i> ${entry.work_hours} hrs</span>
+                        <span class="stat-item"><i class="fas fa-dollar-sign"></i> $${entry.expense}</span>
+                    </div>
+                    ${entry.notes ? `<div class="entry-notes">${entry.notes}</div>` : ''}
+                    <div class="entry-actions">
+                        <button class="btn-edit" data-id="${entry.id}">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn-delete" data-id="${entry.id}">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        entriesContainer.innerHTML = html;
+        
+        // Add event listeners for edit/delete buttons
+        document.querySelectorAll('.btn-edit').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const entryId = this.getAttribute('data-id');
+                editEntry(entryId);
+            });
+        });
+        
+        document.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const entryId = this.getAttribute('data-id');
+                deleteEntry(entryId);
+            });
+        });
+    }
+    
+    async function editEntry(entryId) {
+        try {
+            const response = await fetch(`/api/daily-entry/${entryId}/`);
+            const data = await response.json();
+            
+            if (data.success) {
+                // Populate form with entry data
+                document.getElementById('entry-date').value = data.entry.date;
+                document.getElementById('sleep-hours').value = data.entry.sleep_hours;
+                document.getElementById('work-hours').value = data.entry.work_hours;
+                document.getElementById('expense').value = data.entry.expense;
+                document.getElementById('notes').value = data.entry.notes;
+                
+                // Select correct mood
+                const moodValue = data.entry.mood;
+                emojiOptions.forEach(option => {
+                    if (option.getAttribute('data-mood') === moodValue) {
+                        option.click();
+                    }
+                });
+                
+                // Change form action to update
+                form.action = `/api/daily-entry/${entryId}/`;
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> Update Entry';
+                
+                showNotification('Entry loaded for editing', 'info');
+            }
+        } catch (error) {
+            console.error('Error loading entry:', error);
+        }
+    }
+    
+    async function deleteEntry(entryId) {
+        if (!confirm('Are you sure you want to delete this entry?')) return;
+        
+        try {
+            const response = await fetch(`/api/daily-entry/${entryId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': CSRF_TOKEN,
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('Entry deleted successfully', 'success');
+                loadRecentEntries();
+            } else {
+                showNotification(data.message || 'Error deleting entry', 'error');
+            }
+        } catch (error) {
+            showNotification('Network error', 'error');
+            console.error('Error deleting entry:', error);
+        }
+    }
+    
+    function showNotification(message, type) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+            <button class="notification-close">&times;</button>
+        `;
+        
+        // Add to page
+        document.body.appendChild(notification);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 5000);
+        
+        // Close button
+        notification.querySelector('.notification-close').addEventListener('click', () => {
+            notification.remove();
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}
