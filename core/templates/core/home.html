@@ -1,0 +1,115 @@
+{% extends 'core/dashboard_base.html' %}
+
+{% block title %}Home — Smart Life Analyzer{% endblock %}
+
+{% block content %}
+<div class="top-header">
+    <div class="page-title">
+        <h1>Dashboard Overview</h1>
+        <p>Welcome back, {{ request.user.get_full_name|default:request.user.username }}! Here's your life analytics
+            summary</p>
+    </div>
+    <div class="user-profile">
+        <span class="user-profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+        <div class="profile-img">
+            {% if request.user.profile.get_photo_url %}
+            <img src="{{ request.user.profile.get_photo_url }}" alt="Profile Photo">
+            {% else %}
+            {{ request.user.profile.get_initials }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="dashboard-grid">
+    <div class="card stat-card">
+        <div class="stat-icon sleep">
+            <i class="fas fa-bed"></i>
+        </div>
+        <div class="stat-value">{{ avg_sleep }} hrs</div>
+        <div class="stat-label">Average Sleep</div>
+        <p class="stat-desc">Last 7 days</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon study">
+            <i class="fas fa-laptop-code"></i>
+        </div>
+        <div class="stat-value">{{ avg_work }} hrs</div>
+        <div class="stat-label">Daily Study/Work</div>
+        <p class="stat-desc">Productivity score: {{ productivity_score }}%</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon expense">
+            <i class="fas fa-dollar-sign"></i>
+        </div>
+        <div class="stat-value">${{ avg_expense }}</div>
+        <div class="stat-label">Daily Expense</div>
+        <p class="stat-desc">
+            {% if expense_trend > 0 %}
+            {{ expense_trend }}% higher than last week
+            {% elif expense_trend < 0 %} {{ expense_trend|cut:"-" }}% lower than last week {% else %} Same as last week
+                {% endif %} </p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon mood">
+            <i class="fas fa-smile"></i>
+        </div>
+        <div class="stat-value">
+            {% if today_entry %}
+            {{ today_entry.get_mood_emoji }}
+            {% else %}
+            —
+            {% endif %}
+        </div>
+        <div class="stat-label">Today's Mood</div>
+        <p class="stat-desc">Trending {{ mood_trend }}</p>
+    </div>
+</div>
+
+<!-- Weekly Chart -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-chart-line"></i> Weekly Summary
+        </div>
+        <a href="{% url 'dashboard' %}" class="card-action">View Details</a>
+    </div>
+    <div class="chart-container">
+        <canvas id="weeklyChart" data-labels='{{ chart_labels }}' data-sleep='{{ chart_sleep }}'
+            data-work='{{ chart_work }}'></canvas>
+    </div>
+</div>
+
+<!-- Smart Suggestions -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-robot"></i> Smart Suggestions
+        </div>
+        <a href="{% url 'suggestions' %}" class="card-action">View All</a>
+    </div>
+
+    {% if suggestions %}
+    <div class="suggestion-grid">
+        {% for suggestion in suggestions %}
+        <div class="suggestion-card {{ suggestion.severity }}">
+            <div class="suggestion-icon">
+                <i class="{{ suggestion.get_category_icon }}"></i>
+            </div>
+            <div class="suggestion-title">{{ suggestion.title }}</div>
+            <p>{{ suggestion.description }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-lightbulb"></i>
+        <p>Start logging daily entries to get personalized suggestions!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

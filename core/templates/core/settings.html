@@ -1,0 +1,351 @@
+{% extends 'core/dashboard_base.html' %}
+
+{% block title %}Settings — Smart Life Analyzer{% endblock %}
+
+{% block content %}
+<div class="top-header">
+    <div class="page-title">
+        <h1>Settings</h1>
+        <p>Manage your account and preferences</p>
+    </div>
+    <div class="user-profile">
+        <span class="user-profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+        <div class="profile-img">
+            {% if request.user.profile.get_photo_url %}
+            <img src="{{ request.user.profile.get_photo_url }}" alt="Profile Photo">
+            {% else %}
+            {{ request.user.profile.get_initials }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if success_message %}
+<div class="alert alert-success">
+    <i class="fas fa-check-circle"></i> {{ success_message }}
+</div>
+{% endif %}
+
+{% if error_message %}
+<div class="alert alert-error">
+    <i class="fas fa-exclamation-circle"></i> {{ error_message }}
+</div>
+{% endif %}
+
+<div class="accordion-container" id="settings-accordion">
+
+    <!-- 1. Personal Information -->
+    <div class="accordion-item {% if active_section == 'personal-info' %}active{% endif %}"
+        data-section="personal-info">
+        <button class="accordion-header" type="button" id="accordion-btn-personal-info">
+            <div class="accordion-header-left">
+                <div class="accordion-icon personal-info-icon">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div>
+                    <span class="accordion-title">Personal Information</span>
+                    <span class="accordion-subtitle">Update your profile photo, name, contact &amp; address
+                        details</span>
+                </div>
+            </div>
+            <i class="fas fa-chevron-down accordion-chevron"></i>
+        </button>
+        <div class="accordion-body">
+            <div class="accordion-content">
+
+                <!-- Profile Photo Section -->
+                <div class="photo-upload-section">
+                    <div class="photo-preview-wrapper">
+                        <div class="photo-preview" id="photo-preview">
+                            {% if request.user.profile.get_photo_url %}
+                            <img src="{{ request.user.profile.get_photo_url }}" alt="Profile Photo"
+                                id="photo-preview-img">
+                            {% else %}
+                            <div class="photo-placeholder">
+                                <i class="fas fa-camera"></i>
+                                <span>No Photo</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="photo-actions">
+                            <form method="post" action="{% url 'settings' %}" enctype="multipart/form-data"
+                                id="photo-upload-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="upload_photo">
+                                {{ photo_form.profile_photo }}
+                                <label for="profile-photo-input" class="btn btn-secondary btn-photo-action">
+                                    <i class="fas fa-upload"></i> Upload Photo
+                                </label>
+                            </form>
+                            {% if request.user.profile.get_photo_url %}
+                            <form method="post" action="{% url 'settings' %}" class="inline-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="remove_photo">
+                                <button type="submit" class="btn btn-danger btn-photo-action btn-sm">
+                                    <i class="fas fa-trash-alt"></i> Remove
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <p class="photo-hint"><i class="fas fa-info-circle"></i> Recommended: Square image, at least 200×200
+                        pixels. Max 5MB.</p>
+                </div>
+
+                <hr class="section-divider">
+
+                <!-- Personal Info Form -->
+                <form method="post" action="{% url 'settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_profile">
+                    <div class="form-group">
+                        <label for="settings-username">Username</label>
+                        {{ profile_form.username }}
+                        {% if profile_form.username.help_text %}
+                        <small class="form-help">{{ profile_form.username.help_text }}</small>
+                        {% endif %}
+                        {% if profile_form.username.errors %}
+                        <ul class="errorlist">
+                            {% for error in profile_form.username.errors %}<li>{{ error }}</li>{% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="settings-first-name">First Name</label>
+                            {{ profile_form.first_name }}
+                            {% if profile_form.first_name.errors %}
+                            <ul class="errorlist">
+                                {% for error in profile_form.first_name.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label for="settings-last-name">Last Name</label>
+                            {{ profile_form.last_name }}
+                            {% if profile_form.last_name.errors %}
+                            <ul class="errorlist">
+                                {% for error in profile_form.last_name.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="settings-email">Email Address</label>
+                            {{ profile_form.email }}
+                            {% if profile_form.email.errors %}
+                            <ul class="errorlist">
+                                {% for error in profile_form.email.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label for="settings-phone">Phone Number</label>
+                            {{ profile_form.phone }}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="settings-dob">Date of Birth</label>
+                            {{ profile_form.date_of_birth }}
+                        </div>
+                        <div class="form-group">
+                            <label for="settings-gender">Gender</label>
+                            {{ profile_form.gender }}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="settings-address">Address</label>
+                            {{ profile_form.address }}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="settings-location">Location (City, State)</label>
+                            {{ profile_form.location }}
+                        </div>
+                        <div class="form-group">
+                            <label for="settings-postal-code">Postal Code</label>
+                            {{ profile_form.postal_code }}
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-settings-save">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Themes -->
+    <div class="accordion-item {% if active_section == 'themes' %}active{% endif %}" data-section="themes">
+        <button class="accordion-header" type="button" id="accordion-btn-themes">
+            <div class="accordion-header-left">
+                <div class="accordion-icon themes-icon">
+                    <i class="fas fa-palette"></i>
+                </div>
+                <div>
+                    <span class="accordion-title">Themes</span>
+                    <span class="accordion-subtitle">Choose your preferred color theme</span>
+                </div>
+            </div>
+            <i class="fas fa-chevron-down accordion-chevron"></i>
+        </button>
+        <div class="accordion-body">
+            <div class="accordion-content">
+                <form method="post" action="{% url 'settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_theme">
+                    <div class="theme-grid">
+                        {% for value, label in theme_form.fields.theme.choices %}
+                        <label class="theme-card {% if current_theme == value %}active{% endif %}"
+                            for="theme-{{ value }}">
+                            <input type="radio" name="theme" value="{{ value }}" id="theme-{{ value }}" {% if current_theme == value %}checked{% endif %}>
+                            <div class="theme-preview theme-preview-{{ value }}">
+                                <div class="theme-preview-sidebar"></div>
+                                <div class="theme-preview-content">
+                                    <div class="theme-preview-bar"></div>
+                                    <div class="theme-preview-cards">
+                                        <div class="theme-preview-card"></div>
+                                        <div class="theme-preview-card"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="theme-label">
+                                <span class="theme-name">{{ label }}</span>
+                                {% if current_theme == value %}
+                                <span class="theme-badge">Active</span>
+                                {% endif %}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-settings-save">
+                        <i class="fas fa-palette"></i> Apply Theme
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Change Password -->
+    <div class="accordion-item {% if active_section == 'change-password' %}active{% endif %}"
+        data-section="change-password">
+        <button class="accordion-header" type="button" id="accordion-btn-change-password">
+            <div class="accordion-header-left">
+                <div class="accordion-icon password-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <div>
+                    <span class="accordion-title">Change Password</span>
+                    <span class="accordion-subtitle">Update your login credentials securely</span>
+                </div>
+            </div>
+            <i class="fas fa-chevron-down accordion-chevron"></i>
+        </button>
+        <div class="accordion-body">
+            <div class="accordion-content">
+                <form method="post" action="{% url 'settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_password">
+                    <div class="form-group">
+                        <label for="current-password">Current Password</label>
+                        {{ password_form.current_password }}
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="new-password">New Password</label>
+                            {{ password_form.new_password }}
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-new-password">Confirm New Password</label>
+                            {{ password_form.confirm_password }}
+                        </div>
+                    </div>
+                    {% if password_form.errors %}
+                    <div class="alert alert-error" style="margin-top: 0;">
+                        <i class="fas fa-exclamation-circle"></i>
+                        {% for field, errors in password_form.errors.items %}
+                        {% for error in errors %}{{ error }} {% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary btn-settings-save">
+                        <i class="fas fa-key"></i> Change Password
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Account Management -->
+    <div class="accordion-item {% if active_section == 'account-management' %}active{% endif %}"
+        data-section="account-management">
+        <button class="accordion-header" type="button" id="accordion-btn-account-management">
+            <div class="accordion-header-left">
+                <div class="accordion-icon account-icon">
+                    <i class="fas fa-cogs"></i>
+                </div>
+                <div>
+                    <span class="accordion-title">Account Management</span>
+                    <span class="accordion-subtitle">Export data or deactivate your account</span>
+                </div>
+            </div>
+            <i class="fas fa-chevron-down accordion-chevron"></i>
+        </button>
+        <div class="accordion-body">
+            <div class="accordion-content">
+                <div class="account-action-card">
+                    <div class="account-action-info">
+                        <i class="fas fa-file-export account-action-icon export"></i>
+                        <div>
+                            <h4>Export Your Data</h4>
+                            <p>Download all your entries and profile data as a JSON file.</p>
+                        </div>
+                    </div>
+                    <form method="post" action="{% url 'settings' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="export_data">
+                        <button type="submit" class="btn btn-secondary btn-action">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </form>
+                </div>
+                <div class="account-action-card danger-zone">
+                    <div class="account-action-info">
+                        <i class="fas fa-user-slash account-action-icon danger"></i>
+                        <div>
+                            <h4>Deactivate Account</h4>
+                            <p>Permanently disable your account. This action cannot be undone easily.</p>
+                        </div>
+                    </div>
+                    <form method="post" action="{% url 'settings' %}" id="deactivate-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="deactivate_account">
+                        <button type="button" class="btn btn-danger btn-action" id="deactivate-btn">
+                            <i class="fas fa-exclamation-triangle"></i> Deactivate
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="deactivate-modal">
+    <div class="modal-box">
+        <div class="modal-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3>Deactivate Account?</h3>
+        <p>Are you sure you want to deactivate your account? You will be logged out and won't be able to sign in until
+            an admin reactivates it.</p>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+            <button class="btn btn-danger" id="modal-confirm">Yes, Deactivate</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

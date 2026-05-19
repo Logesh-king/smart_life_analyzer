@@ -1,0 +1,135 @@
+{% extends 'core/dashboard_base.html' %}
+
+{% block title %}Analytics Dashboard — Smart Life Analyzer{% endblock %}
+
+{% block content %}
+<div class="top-header">
+    <div class="page-title">
+        <h1>Analytics Dashboard</h1>
+        <p>Comprehensive analysis of your life metrics</p>
+    </div>
+    <div class="user-profile">
+        <span class="user-profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+        <div class="profile-img">
+            {% if request.user.profile.get_photo_url %}
+            <img src="{{ request.user.profile.get_photo_url }}" alt="Profile Photo">
+            {% else %}
+            {{ request.user.profile.get_initials }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Today's Overview -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-chart-pie"></i> Today's Overview
+        </div>
+    </div>
+    <div class="dashboard-grid">
+        <div class="stat-card">
+            <div class="stat-icon sleep">
+                <i class="fas fa-bed"></i>
+            </div>
+            <div class="stat-value">
+                {% if today_entry %}{{ today_entry.sleep_hours }} hrs{% else %}—{% endif %}
+            </div>
+            <div class="stat-label">Sleep</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon study">
+                <i class="fas fa-laptop-code"></i>
+            </div>
+            <div class="stat-value">
+                {% if today_entry %}{{ today_entry.work_hours }} hrs{% else %}—{% endif %}
+            </div>
+            <div class="stat-label">Study/Work</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon expense">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="stat-value">
+                {% if today_entry %}${{ today_entry.expense }}{% else %}—{% endif %}
+            </div>
+            <div class="stat-label">Expense</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon mood">
+                <i class="fas fa-smile"></i>
+            </div>
+            <div class="stat-value">
+                {% if today_entry %}{{ today_entry.get_mood_emoji }}{% else %}—{% endif %}
+            </div>
+            <div class="stat-label">Mood</div>
+        </div>
+    </div>
+</div>
+
+<!-- Weekly Summary -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-calendar-week"></i> Weekly Summary
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="stat-card">
+            <div class="stat-value">{{ avg_sleep }} hrs</div>
+            <div class="stat-label">Avg Sleep</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value">{{ total_work }} hrs</div>
+            <div class="stat-label">Total Study/Work</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value">${{ total_expense }}</div>
+            <div class="stat-label">Total Expenses</div>
+        </div>
+    </div>
+</div>
+
+<!-- Mood Tracker Chart -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-heart"></i> Mood Tracker (Last 7 Days)
+        </div>
+    </div>
+    <div class="chart-container">
+        <canvas id="moodChart" data-labels='{{ mood_labels }}' data-scores='{{ mood_scores }}'
+            data-colors='{{ mood_colors }}' data-borders='{{ mood_borders }}'></canvas>
+    </div>
+</div>
+
+<!-- Expense Insights -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-wallet"></i> Expense Insights
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="stat-card">
+            <div class="stat-value">${{ avg_expense }}</div>
+            <div class="stat-label">Avg Daily Expense</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value">{{ highest_spending_day }}</div>
+            <div class="stat-label">Highest Spending Day</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value">{{ budget_alerts }}</div>
+            <div class="stat-label">Budget Alerts This Week</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

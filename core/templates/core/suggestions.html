@@ -1,0 +1,43 @@
+{% extends 'core/dashboard_base.html' %}
+
+{% block title %}Smart Suggestions — Smart Life Analyzer{% endblock %}
+
+{% block content %}
+<div class="top-header">
+    <div class="page-title">
+        <h1>Smart Suggestions</h1>
+        <p>Personalized recommendations to improve your lifestyle</p>
+    </div>
+    <div class="user-profile">
+        <span class="user-profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+        <div class="profile-img">
+            {% if request.user.profile.get_photo_url %}
+            <img src="{{ request.user.profile.get_photo_url }}" alt="Profile Photo">
+            {% else %}
+            {{ request.user.profile.get_initials }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if suggestions %}
+<div class="suggestion-grid">
+    {% for suggestion in suggestions %}
+    <div class="card suggestion-card {{ suggestion.severity }}">
+        <div class="suggestion-icon">
+            <i class="{{ suggestion.get_category_icon }}"></i>
+        </div>
+        <div class="suggestion-title">{{ suggestion.title }}</div>
+        <p>{{ suggestion.description }}</p>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <i class="fas fa-lightbulb"></i>
+        <p>No suggestions yet. Start logging your daily entries to receive personalized recommendations!</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

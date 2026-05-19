@@ -1,0 +1,114 @@
+{% extends 'core/dashboard_base.html' %}
+
+{% block title %}Daily Entry — Smart Life Analyzer{% endblock %}
+
+{% block content %}
+<div class="top-header">
+    <div class="page-title">
+        <h1>Daily Entry</h1>
+        <p>Log your daily activities and metrics</p>
+    </div>
+    <div class="user-profile">
+        <span class="user-profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+        <div class="profile-img">
+            {% if request.user.profile.get_photo_url %}
+            <img src="{{ request.user.profile.get_photo_url }}" alt="Profile Photo">
+            {% else %}
+            {{ request.user.profile.get_initials }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Entry Form -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-calendar-plus"></i> Add Today's Entry
+        </div>
+    </div>
+
+    <form id="daily-entry-form" method="post" action="{% url 'daily_entry' %}">
+        {% csrf_token %}
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="entry-date">Date</label>
+                {{ form.date }}
+            </div>
+
+            <div class="form-group">
+                <label for="sleep-hours">Sleep Hours</label>
+                {{ form.sleep_hours }}
+            </div>
+
+            <div class="form-group">
+                <label for="work-hours">Study/Work Hours</label>
+                {{ form.work_hours }}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="expense">Expense ($)</label>
+                {{ form.expense }}
+            </div>
+
+            <div class="form-group">
+                <label>Mood</label>
+                <div class="emoji-selector">
+                    <div class="emoji-option selected" data-mood="happy">😊</div>
+                    <div class="emoji-option" data-mood="neutral">😐</div>
+                    <div class="emoji-option" data-mood="sad">😔</div>
+                    <div class="emoji-option" data-mood="stressed">😫</div>
+                    <div class="emoji-option" data-mood="energetic">😎</div>
+                </div>
+                {{ form.mood }}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group full-width">
+                <label for="notes">Notes</label>
+                {{ form.notes }}
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Save Today's Entry
+        </button>
+    </form>
+</div>
+
+<!-- Recent Entries -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-history"></i> Recent Entries
+        </div>
+    </div>
+
+    {% if recent_entries %}
+    <div id="recent-entries">
+        {% for entry in recent_entries %}
+        <div class="entry-row">
+            <div>
+                <div class="entry-date">{{ entry.date|date:"D, M d, Y" }}</div>
+                <div class="entry-details">
+                    Sleep: {{ entry.sleep_hours }}hrs | Work: {{ entry.work_hours }}hrs | Expense: ${{ entry.expense }}
+                </div>
+            </div>
+            <div class="entry-mood">
+                {{ entry.get_mood_emoji }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-calendar-plus"></i>
+        <p>No entries yet. Start by adding your first daily entry above!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
