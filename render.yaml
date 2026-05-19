@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: smart-life-analyzer
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn life_analyzer.wsgi:application"
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DJANGO_DEBUG
+        value: "False"
