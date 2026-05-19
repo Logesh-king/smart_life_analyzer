@@ -23,16 +23,16 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['smart-life-analyzer.onrender.com']
 
-# CSRF_TRUSTED_ORIGINS = [
-#     'https://smart-life-analyzer.onrender.com',
-# ]
+CSRF_TRUSTED_ORIGINS = [
+    'https://smart-life-analyzer.onrender.com',
+]
 
-# if not DEBUG:
-#     SESSION_COOKIE_SECURE = True
-#     CSRF_COOKIE_SECURE = True
-#     SECURE_SSL_REDIRECT = True
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
 
 # Application definition
 
