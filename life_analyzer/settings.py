@@ -23,9 +23,7 @@ DEBUG = os.environ.get(
     'False'
 ).lower() in ('true', '1', 'yes')
 
-AALLOWED_HOSTS = [
-    'smart-life-analyzer.onrender.com',
-]
+ALLOWED_HOSTS = ['smart-life-analyzer.onrender.com',]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://smart-life-analyzer.onrender.com',
