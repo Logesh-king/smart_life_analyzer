@@ -15,26 +15,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-tvbl$!22ilzo!i^0^6=ihx&*)9jwgl49%lur^@y=8z$=x7_n1x'
-)
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+DEBUG = os.environ.get(
+    'DJANGO_DEBUG',
+    'False'
+).lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = ['smart-life-analyzer.onrender.com']
+AALLOWED_HOSTS = [
+    'smart-life-analyzer.onrender.com',
+]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://smart-life-analyzer.onrender.com',
 ]
-
-if not DEBUG:
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = True
-
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -128,7 +123,6 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
@@ -142,3 +136,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Production Security
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
